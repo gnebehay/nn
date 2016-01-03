@@ -18,7 +18,7 @@ def predict(W1,W2,X):
 
     return W2NL
 
-MAX_ITER = 100000
+MAX_ITER = 10000
 a = .01 #Learning rate
 
 W1_BIAS = True
@@ -26,8 +26,28 @@ W2_BIAS = False
 
 S = 1
 
-X = np.atleast_2d(np.arange(-3,3)).T
-Y = (X+2)*2
+X = np.atleast_2d(np.arange(-10,10, dtype=np.float)).T
+
+Y = (X - 10)*2
+
+#Normalize input
+
+X_MEAN = np.mean(X)
+
+X -= X_MEAN
+
+X_STD = np.std(X)
+
+X /= X_STD
+
+#Normalize target
+Y_MEAN = np.mean(Y)
+
+Y -= Y_MEAN
+
+Y_STD = np.std(Y)
+
+Y /= Y_STD
 
 X_nobias = X.copy()
 
@@ -115,14 +135,17 @@ print('W2={}'.format(W2_BEST))
 print()
 
 
-X2 = np.atleast_2d(np.linspace(-50,50, num=1000)).T
-
+X2 = np.atleast_2d(np.linspace(-2,2, num=1000)).T
 Y2 = predict(W1, W2, X2)
+
+X2 = X2 * X_STD + X_MEAN
+Y2 = Y2 * Y_STD + Y_MEAN
+
 T2 = np.tanh(X2)
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
 plt.plot(X2, Y2)
 plt.plot(X2, T2)
-plt.scatter(X_nobias,Y)
+plt.scatter(X_nobias*X_STD + X_MEAN,Y*Y_STD + Y_MEAN)
 plt.show()
