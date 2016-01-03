@@ -3,40 +3,55 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def predict(W1,W2,X):
-    #X = np.hstack((X, np.ones_like(X)))
+    if W1_BIAS:
+        X = np.hstack((X, np.ones_like(X)))
 
     W1X = W1.dot(X.T).T
 
     NL = np.tanh(W1X)
 
-    #NL = np.vstack((NL, np.ones_like(NL)))
-
-    W2NL = W2.dot(NL.T).T
+    if W2_BIAS:
+        NL_BIAS = np.hstack((NL, np.ones_like(NL)))
+        W2NL = W2.dot(NL_BIAS.T).T
+    else:
+        W2NL = W2.dot(NL.T).T
 
     return W2NL
 
-MAX_ITER = 10000
-a = .001 #Learning rate
+MAX_ITER = 100000
+a = .01 #Learning rate
 
-LAYER_SIZE = 1
+W1_BIAS = True
+W2_BIAS = False
 
-X = np.array([[1,2,3,4,5,6]]).T
+S = 1
+
+X = np.atleast_2d(np.arange(-3,3)).T
+Y = (X+2)*2
 
 X_nobias = X.copy()
 
-#X = np.hstack((X, np.ones_like(X)))
+if W1_BIAS:
+    X = np.hstack((X, np.ones_like(X)))
 
 N = X.shape[0]
 M = X.shape[1]
 
-Y = np.array([[2,4,6,8,10,12]]).T
 
-W1 = np.random.rand(LAYER_SIZE,  M)
-W2 = np.random.rand(1, LAYER_SIZE)
+W1 = np.random.rand(S,  M)
+
+if W2_BIAS:
+    W2 = np.random.rand(1, S+1) #+1 is for the bias
+else:
+    W2 = np.random.rand(1, S)
 
 #W1 = np.ones((M, LAYER_SIZE))
 
 #W2 = np.ones((M, LAYER_SIZE))
+
+ERR_MIN = np.inf
+W1_BEST = W1
+W2_BEST = W2
 
 for i in range(1,MAX_ITER):
 
@@ -44,9 +59,11 @@ for i in range(1,MAX_ITER):
 
     NL = np.tanh(W1X)
 
-    #NL = np.vstack((NL, np.ones_like(NL)))
-
-    W2NL = W2.dot(NL.T).T
+    if W2_BIAS:
+        NL_BIAS = np.hstack((NL, np.ones_like(NL)))
+        W2NL = W2.dot(NL_BIAS.T).T
+    else:
+        W2NL = W2.dot(NL.T).T
 
     DIFF = W2NL - Y
 
@@ -61,11 +78,16 @@ for i in range(1,MAX_ITER):
 
     diff_d_w2nl = squared_d_diff
 
-    w2nl_d_w2 = NL.T.dot(diff_d_w2nl) #This is the gradient for w2
+    if W2_BIAS:
+        w2nl_d_w2 = NL_BIAS.T.dot(diff_d_w2nl).T #This is the gradient for w2
+        w2nl_d_nl = W2.T.dot(diff_d_w2nl.T).T
+        #Keep only S dimensions, ignore gradient for constant input 1
+        w2nl_d_nl = w2nl_d_nl[:,:S]
+    else:
+        w2nl_d_w2 = NL.T.dot(diff_d_w2nl).T #This is the gradient for w2
+        w2nl_d_nl = W2.T.dot(diff_d_w2nl.T).T
 
-    w2nl_d_nl = W2.T.dot(diff_d_w2nl.T).T
-
-    nl_d_w1x = w2nl_d_nl*((1 - NL**2))
+    nl_d_w1x = w2nl_d_nl*(1 - NL**2)
 
     w1x_d_w1 = X.T.dot(nl_d_w1x).T #This is the gradient for w1
 
@@ -73,12 +95,24 @@ for i in range(1,MAX_ITER):
     W1 = W1 - a * w1x_d_w1
     W2 = W2 - a * w2nl_d_w2
 
+    if MEAN < ERR_MIN:
+        W1_BEST = W1
+        W2_BEST = W2
+        ERR_MIN = MEAN
+
 print('iteration {}'.format(i))
 print('avg loss={}'.format(MEAN))
 print('W1={}'.format(W1))
 print('W2={}'.format(W2))
 print()
 
+W1 = W1_BEST
+W2 = W2_BEST
+
+print('avg loss={}'.format(ERR_MIN))
+print('W1={}'.format(W1_BEST))
+print('W2={}'.format(W2_BEST))
+print()
 
 
 X2 = np.atleast_2d(np.linspace(-50,50, num=1000)).T
