@@ -11,7 +11,7 @@ def predict(W1,W2,X):
     NL = np.tanh(W1X)
 
     if W2_BIAS:
-        NL_BIAS = np.hstack((NL, np.ones_like(NL)))
+        NL_BIAS = np.hstack((NL, np.ones((NL.shape[0],1))))
         W2NL = W2.dot(NL_BIAS.T).T
     else:
         W2NL = W2.dot(NL.T).T
@@ -22,13 +22,13 @@ MAX_ITER = 10000
 a = .01 #Learning rate
 
 W1_BIAS = True
-W2_BIAS = False
+W2_BIAS = True
 
-S = 1
+S = 10
 
-X = np.atleast_2d(np.arange(-10,10, dtype=np.float)).T
+X = np.atleast_2d(np.arange(-10,15, dtype=np.float)).T
 
-Y = (X - 10)*2
+Y = X ** 2
 
 #Normalize input
 
@@ -80,7 +80,7 @@ for i in range(1,MAX_ITER):
     NL = np.tanh(W1X)
 
     if W2_BIAS:
-        NL_BIAS = np.hstack((NL, np.ones_like(NL)))
+        NL_BIAS = np.hstack((NL, np.ones((NL.shape[0],1))))
         W2NL = W2.dot(NL_BIAS.T).T
     else:
         W2NL = W2.dot(NL.T).T
