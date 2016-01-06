@@ -5,10 +5,6 @@ from mpl_toolkits.mplot3d import Axes3D
 Network = Input(2) ** Bias() ** Weight(4) ** Tanh() ** Bias() ** Weight(4) ** Tanh() ** Bias() ** Weight(1) ** Output(1)
 Network.Init()
 
-#i = np.linspace(-1,1,3)
-#x, y = np.meshgrid(i, i)
-#z = x + y
-
 TrainInput = np.random.rand(500,2)*2-1
 TrainOutput = TrainInput[:,0]**2 + TrainInput[:,1]**2
 
