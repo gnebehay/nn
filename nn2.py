@@ -1,0 +1,176 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+class Layer:
+    NextLayer = None
+    PrevLayer = None
+
+    InputCardinality = None
+    OutputCardinality = None
+
+    InputValues = None
+    OutputValues = None
+
+    ID = None
+    
+    def __pow__(self, n):
+        self.NextLayer = n
+        n.PrevLayer = self
+        return self
+
+    def Init(self):
+        if self.NextLayer is not None:
+            self.NextLayer.ID = self.ID + 1
+            self.NextLayer.Init()
+
+    def Print(self):
+        tmp = self
+        while tmp is not None:
+            tmp = tmp.NextLayer
+
+    def Calculate(self):
+        self.OutputValues = self.InputValues
+
+    def Evaluate(self, Input):
+        self.InputValues = Input
+        self.Calculate()
+        assert self.OutputValues.shape[0] == self.OutputCardinality, "Data Cardinality does not match for {} Layer #{}".format(type(self).__name__, self.ID)
+        return self.NextLayer.Evaluate(self.OutputValues)
+
+    def Train(self, Input, Target, Rate):
+        Output = self.Evaluate(Input)
+        Difference = Target - Output
+        self.Learn(Difference, Rate)
+
+    def Learn(self, Difference, Factor):
+        self.NextLayer.Learn(Difference, Factor)
+
+    def CalculateGradient(self, NextGradient):
+        self.PrevLayer.CalculateGradient(NextGradient)
+        
+
+class Input(Layer):
+    def __init__(self, Inputs):
+        self.InputCardinality = Inputs
+        self.OutputCardinality = self.InputCardinality
+        self.ID = 1
+
+    def Calculate(self):
+        self.OutputValues = np.atleast_2d(self.InputValues)
+
+    def CalculateGradient(self, NextGradient):
+        pass;
+
+       
+class Output(Layer):
+    def __init__(self, Outputs):
+        self.OutputCardinality = Outputs
+        self.InputCardinality = self.OutputCardinality
+
+    def Evaluate(self, Input):
+        self.InputValues = Input
+        self.Calculate()
+        return self.OutputValues
+
+    def Learn(self, Difference, Factor):
+        Error = np.average(Difference ** 2)
+        #print(Error)
+        self.CalculateGradient(Difference)
+
+
+class Straight(Layer):
+    def Init(self):
+        if self.PrevLayer.OutputCardinality is not None:
+            self.InputCardinality = self.PrevLayer.OutputCardinality
+            self.OutputCardinality = self.InputCardinality
+
+            super().Init()
+
+        else:
+            super().Init()
+            self.OutputCardinality = self.NextLayer.InputCardinality
+            self.InputCardinality = self.OutputCardinality
+
+        assert self.InputCardinality == self.PrevLayer.OutputCardinality, "InputCardinalitiy does not match for {} Layer #{}".format(type(self).__name__, self.ID)
+        assert self.OutputCardinality == self.NextLayer.InputCardinality, "OutputCardinality does not match for {} Layer #{}".format(type(self).__name__, self.ID)
+        
+
+class Bias(Layer):
+    def Init(self):
+        if self.PrevLayer.OutputCardinality is not None:
+            self.InputCardinality = self.PrevLayer.OutputCardinality
+            self.OutputCardinality = self.InputCardinality + 1
+
+            super().Init()
+
+        else:
+            super().Init()
+            self.OutputCardinality = self.NextLayer.InputCardinality
+            self.InputCardinality = self.OutputCardinality - 1
+        
+        assert self.InputCardinality == self.PrevLayer.OutputCardinality, "InputCardinalitiy does not match for {} Layer #{}".format(type(self).__name__, self.ID)
+        assert self.OutputCardinality == self.NextLayer.InputCardinality, "OutputCardinality does not match for {} Layer #{}".format(type(self).__name__, self.ID)
+
+    def Calculate(self):
+        self.OutputValues = np.vstack((self.InputValues, np.ones((1, self.InputValues.shape[1]))))
+
+    def CalculateGradient(self, NextGradient):
+        self.PrevLayer.CalculateGradient(NextGradient[:self.InputValues.shape[0],:])
+
+
+class Weight(Layer):
+
+    Parameters = None
+    tmpGradients = None
+
+    def __init__(self, Outputs):
+        self.OutputCardinality = Outputs
+        
+    def Init(self):
+        self.InputCardinality = self.PrevLayer.OutputCardinality
+        super().Init()
+        self.Parameters = np.random.rand(self.InputCardinality, self.OutputCardinality)
+
+    def Calculate(self):
+        self.OutputValues = self.InputValues.T.dot(self.Parameters).T
+
+    def Learn(self, Difference, Factor):
+        super().Learn(Difference, Factor)
+        self.Parameters = self.Parameters + Factor * self.tmpGradients
+
+    def CalculateGradient(self, NextGradient):
+        self.tmpGradients = self.InputValues.dot(NextGradient.T)
+        self.PrevLayer.CalculateGradient(self.Parameters.dot(NextGradient))
+
+
+class Tanh(Straight):
+    def Calculate(self):
+        self.OutputValues = np.tanh(self.InputValues)
+
+    def CalculateGradient(self, NextGradient):
+        self.PrevLayer.CalculateGradient(NextGradient * (1 - self.OutputValues ** 2))
+
+Network = Input(1) ** Bias() ** Weight(2) ** Tanh() ** Bias() ** Weight(1) ** Output(1)
+Network.Init()
+Network.Print()
+
+X = np.arange(-1, 1, 0.05, dtype=np.float)
+Y = X ** 2
+X2 = X * 10
+
+fig = plt.figure()
+plt.scatter(X, Y)
+
+T2 = Network.Evaluate(X2)[0]
+plt.plot(X2, T2, alpha = 0.1)
+
+for i in np.arange(0.2, 1, 0.1):
+    for n in range(1, 1000):
+        Network.Train(X, Y, 0.001)
+
+    T2 = Network.Evaluate(X2)[0]
+    plt.plot(X2, T2, 'g', alpha = i)
+
+plt.show()
+
