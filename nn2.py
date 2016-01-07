@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-
 
 class Layer:
     NextLayer = None
@@ -23,11 +21,6 @@ class Layer:
         if self.NextLayer is not None:
             self.NextLayer.ID = self.ID + 1
             self.NextLayer.Init()
-
-    def Print(self):
-        tmp = self
-        while tmp is not None:
-            tmp = tmp.NextLayer
 
     def Calculate(self):
         self.OutputValues = self.InputValues
@@ -150,27 +143,4 @@ class Tanh(Straight):
 
     def CalculateGradient(self, NextGradient):
         self.PrevLayer.CalculateGradient(NextGradient * (1 - self.OutputValues ** 2))
-
-Network = Input(1) ** Bias() ** Weight(2) ** Tanh() ** Bias() ** Weight(1) ** Output(1)
-Network.Init()
-Network.Print()
-
-X = np.arange(-1, 1, 0.05, dtype=np.float)
-Y = X ** 2
-X2 = X * 10
-
-fig = plt.figure()
-plt.scatter(X, Y)
-
-T2 = Network.Evaluate(X2)[0]
-plt.plot(X2, T2, alpha = 0.1)
-
-for i in np.arange(0.2, 1, 0.1):
-    for n in range(1, 1000):
-        Network.Train(X, Y, 0.001)
-
-    T2 = Network.Evaluate(X2)[0]
-    plt.plot(X2, T2, 'g', alpha = i)
-
-plt.show()
 
